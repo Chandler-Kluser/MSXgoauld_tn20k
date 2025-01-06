@@ -128,7 +128,13 @@ end
     PINFILTER dn3(
         .clk(clk_108m),
         .reset_n(1),
+`ifdef UART_PORT
+        // TO DO:
+        // this uart reset logic is not working
+        .din(ex_bus_reset_n & ~config_reset & reset4_n_ff),
+`else
         .din(ex_bus_reset_n & ~config_reset),
+`endif
         .dout(bus_reset_n)
     );
 

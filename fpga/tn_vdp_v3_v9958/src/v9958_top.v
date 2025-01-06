@@ -342,10 +342,41 @@ module v9958_top(
     wire [7:0] dvi_r;
     wire [7:0] dvi_g;
     wire [7:0] dvi_b;
+    wire [5:0] dvi_r_2;
+    wire [5:0] dvi_g_2;
+    wire [5:0] dvi_b_2;
+    wire [5:0] osd_pixel5;
+    wire       osd_pixel;
+    wire [5:0] char_data;
+    wire       char_we;
+    wire [6:0] char_addr;
+    // SCANLINES
+    assign dvi_r = (scanlin && cy[0]) ? {1'b0, dvi_r_2, 1'b0} : {dvi_r_2, 2'b0};
+    assign dvi_g = (scanlin && cy[0]) ? {1'b0, dvi_g_2, 1'b0} : {dvi_g_2, 2'b0};
+    assign dvi_b = (scanlin && cy[0]) ? {1'b0, dvi_b_2, 1'b0} : {dvi_b_2, 2'b0};
 
-    assign dvi_r = (scanlin && cy[0]) ? { 1'b0, VideoR,   1'b0 } : {VideoR,   2'b0 };
-    assign dvi_g = (scanlin && cy[0]) ? { 1'b0, VideoG,   1'b0 } : {VideoG,   2'b0 };
-    assign dvi_b = (scanlin && cy[0]) ? { 1'b0, VideoB,   1'b0 } : {VideoB,   2'b0 };
+    // OSD (40 column x 20 lines)
+    // in OSD background is shifted 1 bit right to make it dimmer
+    // X OFFSET   = 184 pixels
+    // Y OFFSET   = 120 pixels
+    // OSD WIDTH  = 320 pixels
+    // OSD HEIGHT = 240 pixels
+    assign dvi_r_2 = (OSD) ? {(cx>184 && cx<504 && cy>120 && cy<360) ? {osd_pixel5} : {1'b0,VideoR[5:1]}} : {VideoR};
+    assign dvi_g_2 = (OSD) ? {(cx>184 && cx<504 && cy>120 && cy<360) ? {osd_pixel5} : {1'b0,VideoG[5:1]}} : {VideoG};
+    assign dvi_b_2 = (OSD) ? {(cx>184 && cx<504 && cy>120 && cy<360) ? {osd_pixel5} : {1'b0,VideoB[5:1]}} : {VideoB};
+
+    assign osd_pixel5 = {osd_pixel,osd_pixel,osd_pixel,osd_pixel,osd_pixel};
+
+    osd osd0 (
+        .clk(clk_w),
+        .rst_n(rst_n),
+        .osd_cx(cx-184),
+        .osd_cy(cy-120),
+        .pixel(osd_pixel),
+        .char_data(char_data),
+        .char_we(char_we),
+        .char_addr(char_addr)
+    );
 
 
 ///////////

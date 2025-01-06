@@ -14,6 +14,7 @@ MSX2+ engine in Z80 socket. It turns one MSX into an MSX2+ by replacing Z80 proc
 * MEGARAM-SCC through hdmi
 * USB Keyboard with [MSX Goa'uld Friend](https://github.com/Chandler-Kluser/msx-goauld-friend)
 * Scanlines toggling with [MSX Goa'uld Friend](https://github.com/Chandler-Kluser/msx-goauld-friend)
+* On Screen Display (OSD) toggling with [MSX Goa'uld Friend](https://github.com/Chandler-Kluser/msx-goauld-friend)
 
 ## How it works
 Logic acts on bus control signals so that internal devices inside fpga take priority over external devices. 
