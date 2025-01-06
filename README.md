@@ -13,6 +13,9 @@ MSX2+ engine in Z80 socket. It turns one MSX into an MSX2+ by replacing Z80 proc
 * PSG through hdmi
 * OPLL through hdmi
 * SCC (audio only) through hdmi
+* USB Keyboard with [MSX Goa'uld Friend](https://github.com/Chandler-Kluser/msx-goauld-friend)
+* Scanlines toggling with [MSX Goa'uld Friend](https://github.com/Chandler-Kluser/msx-goauld-friend)
+* On Screen Display (OSD) toggling with [MSX Goa'uld Friend](https://github.com/Chandler-Kluser/msx-goauld-friend)
 
 ## How it works
 Logic acts on bus control signals so that internal devices inside fpga take priority over external devices. 
@@ -31,6 +34,12 @@ Revision 2 uses SOIC-20 for 74HCT373 and 74LVC245 ICs, which are smaller:
 
 Revision 4 uses TSSOP-20 ICs, to get an even smaller footprint:
 ![](/kicad/v4/image/IMG_20240824_114309792.jpg)
+
+## Revision 4.1 Board
+
+Revision 4.1 is an improvement of Revision 4, with no external regulator and UART Headers to use with [MSX Goa'uld Friend](https://github.com/Chandler-Kluser/msx-goauld-friend)
+
+![](/pics/V4_1.jpg)
 
 ## Slot map
 
