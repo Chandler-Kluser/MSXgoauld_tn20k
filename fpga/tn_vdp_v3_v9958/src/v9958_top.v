@@ -33,7 +33,7 @@ module v9958_top(
     //output  [1:0]   led,
 
     input   maxspr_n,
-    input   scanlin_n,
+    input reg  scanlin_n,
     input   gromclk_ena_n,
     input   cpuclk_ena_n,
 
@@ -41,6 +41,7 @@ module v9958_top(
     output            tmds_clk_n,
     output     [2:0]  tmds_data_p,
     output     [2:0]  tmds_data_n,
+    input             OSD,
 
     output WeVdp_n,
     output [16:0] VdpAdr,

@@ -1,7 +1,7 @@
 `define ENABLE_BIOS
 `define ENABLE_SOUND //bios required
 `define ENABLE_MAPPER //bios required
-`define ENABLE_SCAN_LINES
+`define UART_PORT
 
 module top(
     input ex_clk_27m,
@@ -14,7 +14,7 @@ module top(
     input ex_bus_clk_3m6,
 
     inout [7:0] ex_bus_data,
-    
+
     output [1:0] ex_msel,
     output ex_bus_m1_n,
     output ex_bus_rfsh_n,
@@ -32,6 +32,13 @@ module top(
     output [2:0] data_n,
     output clk_p,
     output clk_n,
+`ifdef UART_PORT
+    //uart
+    output uart0_tx,
+    input uart0_rx,
+    // output uart1_tx,
+    // input uart1_rx,
+`endif
 
     // Magic ports for SDRAM to be inferred
     output O_sdram_clk,
@@ -48,7 +55,10 @@ module top(
 );
 
 initial begin
-
+`ifdef UART_PORT
+    ppi_port_b <= 8'hFF;
+    ppi_port_c <= 8'h00;
+`endif
 end
 
     //clocks
@@ -130,9 +140,9 @@ end
 //        .dout(bus_int_n)
 //    );
     denoise dn4 (
-		.data_in (ex_bus_int_n),
-		.clock(clk_108m),
-		.data_out (bus_int_n)
+        .data_in (ex_bus_int_n),
+        .clock(clk_108m),
+        .data_out (bus_int_n)
     );
 
     reg [7:0] bus_data;
@@ -152,6 +162,21 @@ end
     always @ (posedge clk_108m) begin
         bus_data <= ex_bus_data;
     end
+`ifdef UART_PORT
+    // uart
+    uart uart0(
+        .clk(clk_27m),
+        .rst(~bus_reset_n),
+        .uart0_rx(uart0_rx),
+        .uart0_tx(uart0_tx),
+        .reset4_n_ff(reset4_n_ff),
+        .OSD(OSD),
+        .SCANLINES(SCANLINES),
+        .ppi_port_b(ppi_port_b),
+        .ppi_port_c(ppi_port_c),
+        .SHIFT_UP(SHIFT_UP)
+    );
+`endif
 
     //startup logic
     reg reset1_n_ff;
@@ -332,12 +357,19 @@ end
                                 ) ? 1 : 0;
     //assign bus_mreq_disable = ( bios_req == 1 || subrom_req == 1 || msx_logo_req == 1 || scc_req == 1 || mapper_read == 1 || mapper_write == 1) ? 1 : 0;
     //assign bus_mreq_disable = ( bios_req == 1 || subrom_req == 1 || msx_logo_req == 1 || mapper_read == 1 || mapper_write == 1) ? 1 : 0;
-    assign bus_iorq_disable = ( vdp_csr_n == 0 || vdp_csw_n == 0 || rtc_req_r == 1 || rtc_req_w == 1 ) ? 1 : 0;
+`ifdef UART_PORT
+    assign bus_iorq_disable = ( vdp_csr_n == 0 || vdp_csw_n == 0 || rtc_req_w == 1 ||
+                                rtc_req_r == 1 || ppi_req_r_port_a == 1 ||
+                                ppi_req_r_port_b == 1 || ppi_req_r_port_c == 1) ? 1 : 0;
+`else
+    assign bus_iorq_disable = ( vdp_csr_n == 0 || vdp_csw_n == 0 ||
+                        rtc_req_r == 1 || rtc_req_w == 1 ) ? 1 : 0;
+`endif
     assign bus_disable = bus_mreq_disable | bus_iorq_disable;
     assign ex_bus_data = ( bus_data_reverse == 1 && slot0_req_w == 0 ) ? cpu_dout : 
                          ( slot0_req_w == 1 ) ? 8'hff :  8'hzz;
 
-    assign cpu_din = 
+    assign cpu_din =
                 `ifdef ENABLE_MAPPER
                      ( mapper_read == 1) ? mapper_dout :
                 `endif
@@ -355,6 +387,11 @@ end
                      ( megaram_req == 1) ? mapper_dout :
                 `endif
                      //( slot0_req_r == 1 || slot3_req_r == 1) ? 8'hff :
+`ifdef UART_PORT
+                    // to do: merge internal and external ppi signals, for now it is just internal
+                    ( ppi_req_r_port_a == 1 ) ? ppi_port_a :
+                    ( ppi_req_r_port_b == 1 ) ? ppi_port_b :
+`endif
                      ( config_req == 1 ) ? config_dout :
                      ( slot0_req_r == 1 ) ? 8'hff :
                       bus_data;
@@ -442,8 +479,13 @@ end
     );
 
     //slots decoding
-    reg [7:0] ppi_port_a;
+    reg [7:0] ppi_port_a = 8'h00;
+`ifdef UART_PORT
+    reg [7:0] ppi_port_b;
+    reg [7:0] ppi_port_c;
+`else
     wire ppi_req;
+`endif
     wire [1:0] pri_slot;
     wire [3:0] pri_slot_num;
     wire [3:0] page_num;
@@ -451,8 +493,34 @@ end
     //----------------------------------------------------------------
     //-- PPI(8255) / primary-slot
     //----------------------------------------------------------------
+    `ifdef UART_PORT
+    // Port 0xA8: PPI Port A
+    // Port 0xA9: PPI Port B
+    // Port 0xAA: PPI Port C
+    // Port 0xAB: PPI Control Register
+    assign ppi_req_r_port_a = (bus_addr[7:0] == 8'ha8 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0) ? 1:0;
+    assign ppi_req_w_port_a = (bus_addr[7:0] == 8'ha8 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0) ? 1:0;
+    assign ppi_req_r_port_b = (bus_addr[7:0] == 8'ha9 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0) ? 1:0;
+    assign ppi_req_w_port_b = (bus_addr[7:0] == 8'ha9 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0) ? 1:0;
+    assign ppi_req_r_port_c = (bus_addr[7:0] == 8'haa && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0) ? 1:0;
+    assign ppi_req_w_port_c = (bus_addr[7:0] == 8'haa && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0) ? 1:0;
+`else
     assign ppi_req = (bus_addr[7:0] == 8'ha8 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1:0;
-
+`endif
+    // PPI
+    // MSX Keyboard has 88 combinations of keys (uppercase, lowercase, modifier keys, control keys...)
+`ifdef UART_PORT
+    always @ (posedge clk_108m or negedge bus_reset_n) begin
+        if ( bus_reset_n == 0 ) begin
+            ppi_port_a <= 8'h00;
+            ppi_port_c <= 8'h00; // shared with PPI beep (PC7) + cassette (PC6~PC4) + keyboard (PC3~PC0)
+        end else begin
+                 if ( ppi_req_w_port_a == 1 ) ppi_port_a <= cpu_dout;
+            else if ( ppi_req_w_port_c == 1 ) ppi_port_c <= cpu_dout;
+            // port b is input only
+        end
+    end
+`else
     always @ (posedge clk_108m or negedge bus_reset_n) begin
         if ( bus_reset_n == 0)
             ppi_port_a <= 8'h00;
@@ -462,6 +530,7 @@ end
             end
         end
     end
+`endif
 
     //expanded slot 3
     reg [7:0] exp_slot3;
@@ -618,6 +687,8 @@ end
     wire VideoDLClk;
     assign vdp_csw_n = (bus_addr[7:2] == 6'b100110 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 0:1; // I/O:98-9Bh   / VDP (V9938/V9958)
     assign vdp_csr_n = (bus_addr[7:2] == 6'b100110 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 0:1; // I/O:98-9Bh   / VDP (V9938/V9958)
+    reg SCANLINES;
+    reg OSD;
 
     v9958_top vdp4 (
         .clk (clk_27m),
@@ -644,11 +715,12 @@ end
         .adc_miso (0),
 
         .maxspr_n    (1),
-    `ifdef ENABLE_SCAN_LINES
-        .scanlin_n   (~config_enable_scanlines),
-    `else
-        .scanlin_n   (1),
-    `endif
+        .scanlin_n (~SCANLINES),
+`ifdef UART_PORT
+        .OSD(OSD),
+`else
+        .OSD(0),
+`endif
         .gromclk_ena_n (1),
         .cpuclk_ena_n  (1),
 
@@ -1028,7 +1100,7 @@ memory memory_ctrl (
     reg config_enable_megaram123;
     reg config_enable_ghost_scc;
     reg config_reset_ff;
-    wire config_enable_scanlines;
+    // wire config_enable_scanlines;
     wire [1:0] config_keyboard;
     wire config0_req;
     wire config1_req;
@@ -1068,7 +1140,7 @@ memory memory_ctrl (
     assign config0_req = (bus_addr[7:0] == 8'h40 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1:0;
     assign config1_req = (config_ok == 1 && bus_addr[7:0] == 8'h41 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1:0;
     assign config2_req = (config_ok == 1 && bus_addr[7:0] == 8'h42 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1:0;
-    assign config_enable_scanlines = config1_ff[3];
+    // assign config_enable_scanlines = config1_ff[3];
     assign config_keyboard = config2_ff[1:0];
     assign config_req = (bus_addr[7:4] == 4'h4 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0)? 1:0;
     assign config_dout = ( bus_addr[3:0] == 4'h0 ) ? config0_ff :

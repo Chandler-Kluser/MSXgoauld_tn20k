@@ -1,5 +1,9 @@
 set_device GW2AR-LV18QN88C8/I7
 
+add_file denoise/denoise_8.vhd
+add_file denoise/denoise_low.vhd
+add_file denoise/denoise_low8.vhd
+add_file denoise/denoise.vhd
 add_file jtopl/jt2413.v                                                         
 add_file jtopl/jtopl.v                                                          
 add_file jtopl/jtopl2.v                                                         
@@ -59,17 +63,21 @@ add_file tn_vdp_v3_v9958/src/hdmi/source_product_description_info_frame.sv
 add_file tn_vdp_v3_v9958/src/hdmi/tmds_channel.sv                               
 add_file tn_vdp_v3_v9958/src/memory_controller.v                                
 add_file tn_vdp_v3_v9958/src/sdram.v                                            
-add_file tn_vdp_v3_v9958/src/v9958_top.v                                        
+add_file tn_vdp_v3_v9958/src/v9958_top.v
+add_file tn_vdp_v3_v9958/src/osd/osd.v
+add_file src/fake_ppi.v
+add_file monostable/monostable.vhd
+add_file G80A/T80s.vhd
+add_file G80A/g80a.vhd
+add_file G80A/t80.vhd
+add_file G80A/t80_alu.vhd
+add_file G80A/t80_mcode.vhd
+add_file G80A/t80_pack.vhd
+add_file G80A/t80_reg.vhd
 add_file top.v                                                                  
 add_file OCM_3.9/sound/scc/megaram.vhd                                          
 add_file OCM_3.9/sound/scc/scc_wave.vhd                                         
-add_file PSG_YM2149/YM2149.vhdl                                                 
-add_file T80A/t80.vhd                                                           
-add_file T80A/t80_alu.vhd                                                       
-add_file T80A/t80_mcode.vhd                                                     
-add_file T80A/t80_pack.vhd                                                      
-add_file T80A/t80_reg.vhd                                                       
-add_file T80A/t80a.vhd                                                          
+add_file PSG_YM2149/YM2149.vhdl                                                
 add_file src/gowin_clkdiv2/gowin_clkdiv2.vhd                                    
 add_file tn_vdp_v3_v9958/src/ram.vhd                                            
 add_file tn_vdp_v3_v9958/src/vdp/vdp.vhd                                        
@@ -92,7 +100,10 @@ add_file tn_vdp_v3_v9958/src/vdp/vdp_vga.vhd
 add_file tn_vdp_v3_v9958/src/vdp/vdp_wait_control.vhd                           
 add_file tn_vdp_v3_v9958/src/vdp/vencode.vhd                                    
 add_file tang9k.cst                                                             
-add_file Z80_goauld.sdc                                                         
+add_file Z80_goauld.sdc                    
+add_file uart/uart_rx.v
+add_file uart/uart_tx.v
+add_file uart/uart.v                                     
 # add_file src/Z80_goauld.rao                                                     
 
 set_option -use_sspi_as_gpio 1 -top_module top -verilog_std sysv2017 -include_path src
