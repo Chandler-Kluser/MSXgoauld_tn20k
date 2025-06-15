@@ -4,6 +4,7 @@
 `define ENABLE_MAPPER //bios required
 `define ENABLE_CONFIG
 `define UART_PORT
+`define PPI_KEYBEEP
 
 module top(
     input ex_clk_27m,
@@ -16,7 +17,7 @@ module top(
     input ex_bus_clk_3m6,
 
     inout [7:0] ex_bus_data,
-    
+
     output [1:0] ex_msel,
     output ex_bus_m1_n,
     output ex_bus_rfsh_n,
@@ -64,6 +65,10 @@ initial begin
     ppi_port_c <= 8'h00;
 `endif
 end
+
+`ifdef PPI_KEYBEEP
+    reg keybeep;
+`endif
 
     assign SLTSL3 = bus_mreq_disable ^ bus_iorq_disable ^ xffh ^ xffl ^ mapper_read ^ exp_slot3_req_r ^ bios_req ^ subrom_req ^ vdp_csr_n;
 
@@ -398,7 +403,7 @@ end
                          ( slot0_req_w == 1 ) ? 8'hff :  8'hzz;
 //    assign ex_bus_data =  ( bus_data_reverse == 1 ) ? cpu_dout : 8'hzz;
 
-    assign cpu_din = 
+    assign cpu_din =
                 `ifdef ENABLE_MAPPER
                      ( mapper_read == 1) ? mapper_dout :
                 `endif
@@ -544,8 +549,34 @@ end
     assign ppi_req_r_port_c = (bus_addr[7:0] == 8'haa && bus_iorq_n == 0 && bus_m1_n == 1 && bus_rd_n == 0) ? 1:0;
     assign ppi_req_w_port_c = (bus_addr[7:0] == 8'haa && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0) ? 1:0;
 `else
+    `ifdef PPI_KEYBEEP
+        assign ppi_beep_req = (bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1:0;
+    `endif
     assign ppi_req = (bus_addr[7:0] == 8'ha8 && bus_iorq_n == 0 && bus_m1_n == 1 && bus_wr_n == 0)? 1:0;
 `endif
+
+`ifdef PPI_KEYBEEP
+    wire [7:0] ppi_out_c;
+    jt8255 PPI (
+        .rst(~bus_reset_n),
+        .clk(clk_108m),
+        .addr(bus_addr[1:0]),
+        .din(cpu_dout),
+        .dout(),
+        .rdn(bus_rd_n),
+        .wrn(bus_wr_n),
+        .csn(~ppi_beep_req),
+
+        .porta_din(8'h0),
+        .portb_din(8'h0),
+        .portc_din(8'h0),
+
+        .porta_dout(),
+        .portb_dout(),
+        .portc_dout(ppi_out_c)
+    );
+`endif
+
     // PPI
     // MSX Keyboard has 88 combinations of keys (uppercase, lowercase, modifier keys, control keys...)
 `ifdef UART_PORT
@@ -994,7 +1025,12 @@ memory memory_ctrl (
 
     always @ (posedge clk_108m) begin
         if (clk_enable_3m6 == 1 ) begin
-            audio_sample <= { 3'b000 , psgSound1 , 5'b00000 } + { scc_wav, 1'b0 } + jt2413_wav;
+            `ifdef PPI_KEYBEEP
+                // ppi_out_c[7] = keybeep
+                audio_sample <= { 3'b000 , psgSound1 , 5'b00000 } + { scc_wav, 1'b0 } + jt2413_wav + { 1'd0, ppi_out_c[7] , 13'd0 };
+            `else
+                audio_sample <= { 3'b000 , psgSound1 , 5'b00000 } + { scc_wav, 1'b0 } + jt2413_wav;
+            `endif
         end
     end
 
