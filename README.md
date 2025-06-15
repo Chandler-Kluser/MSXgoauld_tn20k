@@ -11,6 +11,7 @@ MSX2+ engine in Z80 socket. It turns one MSX into an MSX2+ by replacing Z80 proc
 * 4MB mapper
 * RTC
 * PSG through hdmi
+* PPI Key Clicks through hdmi
 * OPLL through hdmi
 * SCC (audio only) through hdmi
 * USB Keyboard with [MSX Goa'uld Friend](https://github.com/Chandler-Kluser/msx-goauld-friend)
